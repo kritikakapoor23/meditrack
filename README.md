@@ -1,138 +1,116 @@
 # MediTrack
 
-MediTrack is a full-stack patient management system. It lets you register patients, track their vitals, and automatically computes BMI and a health verdict (Underweight / Normal / Overweight / Obese) for each record. Anyone can browse the patient list and dashboard; adding, editing, or deleting a record requires signing in.
+A full-stack patient management system with JWT-authenticated CRUD and automatic BMI/health-verdict calculation.
 
-- **Backend:** FastAPI (Python), JWT authentication, JSON file storage
-- **Frontend:** React 19, React Router, Tailwind CSS, Vite
+## Screenshots
+
+<div align="center">
+<table>
+<tr>
+<td><img src="https://github.com/user-attachments/assets/2c3cc63c-9ee7-41ba-a45e-e204491ac418" width="420" /></td>
+<td><img src="https://github.com/user-attachments/assets/ce97c7f2-3bb5-407c-9307-c49b58c7f803" width="420" /></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="https://github.com/user-attachments/assets/7995b9cf-11e2-49af-b05e-9d49e514c997" width="420" /></td>
+</tr>
+</table>
+</div>
+
+---
 
 ## Features
 
-- Dashboard with patient counts and a BMI distribution breakdown — open to everyone
-- Sortable, searchable table of all patients (by height, weight, or BMI) — open to everyone
-- Add, edit, and delete patient records — requires login
+- Dashboard — patient counts and BMI distribution breakdown, open to everyone
+- Patients table — sortable by height, weight, or BMI, open to everyone
+- Add / Edit / Delete — requires login
 - Automatic BMI and health-verdict calculation on every create/update
-- JWT-based authentication: a login page, a token stored client-side, and an interceptor that attaches it to every write request and signs the user out automatically if the token is rejected or expires
-- CORS configured via environment variables instead of hardcoded origins, so the frontend's API base URL and the backend's allowed origins are both configurable per environment
+- JWT auth — login page, token persisted client-side, auto-attached to every write request, auto-logout on expiry/rejection
+- CORS and API base URL driven entirely by environment variables — no hardcoded hosts
 
-## Project structure
+## Tech Stack
 
-```
-meditrack/
-├── backend/               FastAPI app
-│   ├── main.py             Routes, models, JWT auth logic
-│   ├── patients.json       Patient data store
-│   └── requirements.txt
-└── frontend/              React app (Vite)
-    └── src/
-        ├── api/
-        │   ├── axiosClient.js   Shared axios instance: attaches JWT, handles 401s
-        │   └── api.js           Patient CRUD calls
-        ├── context/
-        │   └── AuthContext.jsx  Login/logout state, token persistence
-        ├── components/
-        │   ├── ProtectedRoute.jsx
-        │   ├── Navbar.jsx
-        │   ├── Sidebar.jsx
-        │   └── PatientTable.jsx
-        ├── hooks/
-        │   └── usePatients.js   Fetching, sorting, deleting patients
-        └── pages/
-            ├── Login.jsx
-            ├── Dashboard.jsx
-            ├── Patients.jsx
-            ├── AddPatient.jsx
-            └── EditPatient.jsx
-```
+| Layer | Tech |
+|---|---|
+| Frontend | React 19, React Router, Tailwind CSS, Vite |
+| Backend | FastAPI, Python |
+| Auth | JWT (python-jose), bcrypt password hashing (passlib) |
+| Storage | JSON file |
 
-## Getting started
-
-### Prerequisites
-
-- Python 3.10+
-- Node.js 18+
+## Getting Started
 
 ### Backend
-
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate          # macOS/Linux: source venv/bin/activate
+venv\Scripts\activate   # Windows — source venv/bin/activate on Mac/Linux
 pip install -r requirements.txt
 ```
 
-Create a `.env` file in `backend/` (see `.env.example`):
-
+Create `backend/.env` (see `.env.example`):
 ```
 SECRET_KEY=a-long-random-string
 FRONTEND_ORIGINS=http://localhost:5173
 ```
 
-Generate a secret key with:
-
+Generate a secret key:
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Run the server:
-
+Run it:
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
-API docs are available at `http://localhost:8000/docs`.
+API docs: `http://localhost:8000/docs`
 
 ### Frontend
-
 ```bash
 cd frontend
 npm install
 ```
 
-Create a `.env` file in `frontend/` (see `.env.example`):
-
+Create `frontend/.env` (see `.env.example`):
 ```
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-Run the dev server:
-
+Run it:
 ```bash
 npm run dev
 ```
 
-Visit `http://localhost:5173`.
+Visit `http://localhost:5173`
 
 ### Logging in
 
-There's a single hardcoded account, defined in `backend/main.py`:
+Single hardcoded account (see `fake_admin` in `backend/main.py` — change before deploying anywhere real):
 
 - **Username:** `admin`
 - **Password:** `admin123`
 
-Change this before deploying anywhere real — see `fake_admin` in `main.py`.
-
 ## Authentication
 
-- `POST /login` exchanges a username/password for a JWT (1 hour expiry), using OAuth2's password-flow form encoding.
-- The frontend stores the token in `localStorage` and attaches it as a `Bearer` token to every request via an axios interceptor.
-- If any request comes back `401` (expired or invalid token), the interceptor clears the stored token and the app redirects to `/login`, returning the user to the page they were on once they sign back in.
-- Viewing patient data (`/view`, `/patient/{id}`, `/sort`) is public. Creating, editing, and deleting records require a valid token.
+- `POST /login` exchanges username/password for a JWT (1 hour expiry)
+- Frontend stores the token in `localStorage`, attaches it as a `Bearer` token to every request via an axios interceptor
+- A `401` response clears the token and redirects to `/login`, returning the user to the page they were on after signing back in
+- Viewing patient data is public; creating, editing, and deleting records requires a valid token
 
-## API reference
+## API Reference
 
-| Method | Endpoint | Description | Auth required |
+| Method | Endpoint | Description | Auth |
 |---|---|---|---|
 | GET | `/` | Health check | No |
 | GET | `/about` | API description | No |
 | POST | `/login` | Log in, returns a JWT | No |
 | GET | `/view` | Get all patients | No |
 | GET | `/patient/{id}` | Get a single patient | No |
-| GET | `/sort?sort_by=&order=` | Sort patients by `height`, `weight`, or `bmi` | No |
+| GET | `/sort?sort_by=&order=` | Sort by `height`, `weight`, or `bmi` | No |
 | POST | `/post` | Create a patient | Yes |
 | PUT | `/edit/{id}` | Update a patient | Yes |
 | DELETE | `/delete/{id}` | Delete a patient | Yes |
 
-## BMI verdict logic
+## BMI Verdict Logic
 
 | BMI range | Verdict |
 |---|---|
@@ -140,16 +118,10 @@ Change this before deploying anywhere real — see `fake_admin` in `main.py`.
 | 18.5 – 29.9 | Normal |
 | ≥ 30 | Obese |
 
-## Environment variables
+## Environment Variables
 
 | Variable | Where | Purpose |
 |---|---|---|
-| `SECRET_KEY` | `backend/.env` | Signs and verifies JWTs. The app refuses to start without it. |
-| `FRONTEND_ORIGINS` | `backend/.env` | Comma-separated list of origins allowed by CORS (e.g. your deployed frontend's URL) |
-| `VITE_API_BASE_URL` | `frontend/.env` | Base URL the frontend calls for the API (local backend, or your deployed one) |
-
-## Deployment
-
-The backend and frontend deploy independently — there's no build-time coupling between them. Point `VITE_API_BASE_URL` at wherever the backend is hosted, and add that same frontend's deployed URL to the backend's `FRONTEND_ORIGINS` so CORS allows it.
-
-Patient data is stored in `backend/patients.json` on disk, so it resets if the backend's filesystem isn't persistent across restarts/deploys (true of most free-tier PaaS hosting).
+| `SECRET_KEY` | `backend/.env` | Signs/verifies JWTs — app refuses to start without it |
+| `FRONTEND_ORIGINS` | `backend/.env` | Comma-separated CORS allow-list |
+| `VITE_API_BASE_URL` | `frontend/.env` | API base URL the frontend calls |
